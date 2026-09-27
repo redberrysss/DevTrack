@@ -1,0 +1,132 @@
+rules_version = '2';
+
+// DevTrack — Cloud Firestore security rules.
+//
+// Data model
+//   users/{uid}                                   profile document
+//   users/{uid}/projects/{projectId}              project document
+//   users/{uid}/projects/{projectId}/tasks/{id}   task document
+//
+// Every document carries a `userId` field. That field is what makes the
+// collection-group task query in `tasksService.ts` authorisable: Firestore
+// evaluates `resource.data.userId` for collection-group rules, so a signed-in
+// user can read exactly their own tasks and nothing else.
+//
+// Deploy with:
+//   firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Only these keys may be written, and each has to be a scalar/array of the
+    // right size. `createdAt` is immutable so documents cannot be back-dated.
+    function validProject(data) {
+      return data.keys().hasOnly([
+          'name', 'description', 'category', 'status', 'technologies', 'githubUrl',
+          'liveUrl', 'imageUrl', 'progress', 'progressMode', 'startDate', 'endDate',
+          'userId', 'createdAt', 'updatedAt'
+        ])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 80
+        && data.description is string && data.description.size() <= 600
+        && data.category is string && data.category.size() <= 60
+        && data.status in ['planning', 'in-progress', 'completed', 'archived']
+        && data.progressMode in ['manual', 'tasks']
+        && data.progress is int && data.progress >= 0 && data.progress <= 100
+        && data.technologies is list && data.technologies.size() <= 15
+        && data.githubUrl is string && data.githubUrl.size() <= 300
+        && data.liveUrl is string && data.liveUrl.size() <= 300
+        && data.imageUrl is string && data.imageUrl.size() <= 300
+        && data.startDate is string && data.startDate.size() <= 10
+        && data.endDate is string && data.endDate.size() <= 10
+        && data.userId == request.auth.uid;
+    }
+
+    function validTask(data) {
+      return data.keys().hasOnly([
+          'title', 'description', 'completed', 'completedAt', 'projectId',
+          'userId', 'createdAt', 'updatedAt'
+        ])
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 120
+        && data.description is string && data.description.size() <= 400
+        && data.completed is bool
+        && data.userId == request.auth.uid
+        && data.projectId is string
+        && data.projectId.size() > 0
+        && data.projectId.size() <= 128;
+    }
+
+    function validProfile(data) {
+      return data.keys().hasOnly([
+          'name', 'email', 'avatar', 'bio', 'location', 'githubUsername',
+          'linkedinUrl', 'portfolioUrl', 'skills', 'education', 'experience',
+          'emailVerified', 'createdAt', 'updatedAt'
+        ])
+        && data.name is string && data.name.size() <= 60
+        && data.email is string && data.email.size() <= 320
+        // `avatar` holds a Storage *download* URL, so its length depends on the
+        // bucket and project name. 1000 leaves ample headroom for a long
+        // project id while still rejecting an arbitrary blob.
+        && data.avatar is string && data.avatar.size() <= 1000
+        && data.bio is string && data.bio.size() <= 400
+        && data.location is string && data.location.size() <= 80
+        && data.githubUsername is string && data.githubUsername.size() <= 39
+        && data.linkedinUrl is string && data.linkedinUrl.size() <= 300
+        && data.portfolioUrl is string && data.portfolioUrl.size() <= 300
+        && data.skills is list && data.skills.size() <= 30
+        && data.education is list && data.education.size() <= 20
+        && data.experience is list && data.experience.size() <= 20;
+    }
+
+    // No document may be created or updated outside these three match blocks.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && validProfile(request.resource.data);
+      allow update: if isOwner(userId)
+                    && validProfile(request.resource.data)
+                    && request.resource.data.email == resource.data.email
+                    && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false;
+    }
+
+    match /users/{userId}/projects/{projectId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && validProject(request.resource.data);
+      allow update: if isOwner(userId)
+                    && validProject(request.resource.data)
+                    && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isOwner(userId);
+    }
+
+    match /users/{userId}/projects/{projectId}/tasks/{taskId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId)
+                    && validTask(request.resource.data)
+                    && request.resource.data.projectId == projectId;
+      allow update: if isOwner(userId)
+                    && validTask(request.resource.data)
+                    && request.resource.data.projectId == projectId
+                    && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isOwner(userId);
+    }
+
+    // Collection-group access for the dashboard's "all my tasks" listener.
+    // The client query filters on `userId`, and this rule is evaluated for every
+    // candidate document, so a user can only ever read their own tasks. No
+    // writes are granted here: tasks are only writable through the explicit
+    // `users/{userId}/projects/{projectId}/tasks/{taskId}` block above.
+    match /{path=**}/tasks/{taskId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+  }
+}

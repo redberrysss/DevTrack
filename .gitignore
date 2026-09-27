@@ -1,0 +1,27 @@
+node_modules
+dist
+dist-ssr
+coverage
+*.local
+.env
+.env.*
+!.env.example
+
+.DS_Store
+Thumbs.db
+
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# tsc output (must never shadow the .ts/.tsx sources, or Vite resolves the
+# emitted .js first and builds a stale copy of the app)
+src/**/*.js
+src/**/*.d.ts
+src/**/*.js.map
+src/**/*.jsx
+vite.config.js

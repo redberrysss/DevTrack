@@ -1,0 +1,52 @@
+rules_version = '2';
+
+// DevTrack — Cloud Storage security rules.
+//
+// Only one object type exists: the profile avatar, uploaded by
+// `storageService.ts` to `users/{uid}/avatar-<timestamp>.<ext>`.
+//
+// Notes on the checks below:
+//   * `request.resource.size` and `request.resource.contentType` come from the
+//     upload request metadata, so a user cannot lie about the declared size —
+//     the client-side check in `validateAvatarFile` is only a fast pre-flight.
+//   * Writes are limited to the owner's own folder, so one user can never
+//     overwrite another user's avatar.
+//   * Updates must preserve the content type, which stops a user from replacing
+//     an image with an arbitrary file under an image-looking name.
+//
+// Deploy with:
+//   firebase deploy --only storage
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    function isSmallEnough() {
+      return request.resource.size < 2 * 1024 * 1024;
+    }
+
+    match /users/{uid}/{fileName} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && isImage() && isSmallEnough();
+      allow update: if isOwner(uid)
+                    && isImage()
+                    && isSmallEnough()
+                    && request.resource.contentType == resource.contentType;
+      allow delete: if isOwner(uid);
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

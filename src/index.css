@@ -1,0 +1,176 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* -------------------------------------------------------------------------
+   Design tokens
+   Every colour in the app resolves through these variables, so light/dark
+   theming stays consistent across pages, modals, forms and charts.
+   ------------------------------------------------------------------------- */
+@theme inline {
+  --font-sans:
+    ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-hover: var(--surface-hover);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-contrast: var(--brand-contrast);
+  --color-brand-soft: var(--brand-soft);
+  --color-positive: var(--positive);
+  --color-caution: var(--caution);
+  --color-critical: var(--critical);
+
+  --radius-card: 0.75rem;
+  --radius-control: 0.5rem;
+
+  --animate-toast-in: toast-in 180ms ease-out;
+  --animate-fade-in: fade-in 150ms ease-out;
+
+  --shadow-card: 0 1px 2px 0 rgb(16 24 40 / 0.04), 0 1px 3px 0 rgb(16 24 40 / 0.06);
+  --shadow-raised: 0 12px 32px -12px rgb(16 24 40 / 0.24);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@layer base {
+  :root {
+    --canvas: #f6f7f9;
+    --surface: #ffffff;
+    --surface-muted: #f1f3f6;
+    --surface-hover: #eef1f5;
+    --line: #e3e6eb;
+    --line-strong: #cfd4dc;
+    --ink: #101828;
+    --ink-muted: #566172;
+    --ink-subtle: #7b8494;
+    --brand: #2563eb;
+    --brand-hover: #1d4ed8;
+    --brand-contrast: #ffffff;
+    --brand-soft: #eef4ff;
+    --positive: #067647;
+    --caution: #b25e09;
+    --critical: #b42318;
+  }
+
+  .dark {
+    --canvas: #0b0e13;
+    --surface: #11151c;
+    --surface-muted: #171d26;
+    --surface-hover: #1d242f;
+    --line: #232b36;
+    --line-strong: #333d4b;
+    --ink: #e8ebf0;
+    --ink-muted: #9aa5b4;
+    --ink-subtle: #6d7889;
+    --brand: #5b93ff;
+    --brand-hover: #7aa8ff;
+    --brand-contrast: #08101f;
+    --brand-soft: #16233a;
+    --positive: #3ecf8e;
+    --caution: #f5b544;
+    --critical: #f97066;
+  }
+
+  * {
+    border-color: var(--line);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background-color: var(--brand);
+    color: var(--brand-contrast);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Keep long user-supplied strings (URLs, names) from breaking the layout. */
+  .break-anywhere {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}
+
+@layer components {
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 100;
+  }
+
+  .skip-link:focus {
+    left: 1rem;
+    top: 1rem;
+    padding: 0.5rem 0.875rem;
+    background-color: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line-strong);
+    border-radius: 0.5rem;
+    box-shadow: var(--shadow-raised);
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+}
